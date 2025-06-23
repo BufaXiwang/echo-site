@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
-import { broadcastNewRequest } from '../../events/route';
+import { broadcastNewRequest } from '@/lib/broadcast';
 
 async function handler(req: NextRequest) {
   const start = Date.now();
@@ -9,7 +9,7 @@ async function handler(req: NextRequest) {
   const method = req.method;
   const url = req.url;
   const headers = Object.fromEntries(req.headers.entries());
-  let body: any = null;
+  let body: unknown = null;
 
   try {
     if (req.body) {

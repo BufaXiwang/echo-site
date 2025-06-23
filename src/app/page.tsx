@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 type RequestData = {
   id: string;
@@ -22,13 +22,38 @@ export default function Home() {
   const [lastRequestCount, setLastRequestCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
 
+  // 初始化效果
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const { protocol, host } = window.location;
       setEchoUrl(`${protocol}//${host}/api/echo`);
     }
-    fetchRequests();
-  }, []);
+    
+    // 初始加载数据
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/requests');
+        if (!res.ok) {
+          throw new Error('Failed to fetch requests');
+        }
+        const data = await res.json();
+        setRequests(data);
+        setLastRequestCount(data.length);
+        setNewRequestsCount(0);
+        if (data.length > 0 && !selectedRequest) {
+          setSelectedRequest(data[0]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadInitialData();
+  }, [selectedRequest]);
 
   // SSE 连接效果
   useEffect(() => {
@@ -63,9 +88,9 @@ export default function Home() {
       eventSource.close();
       setConnectionStatus('disconnected');
     };
-  }, [autoRefresh]);
+  }, [autoRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -87,10 +112,10 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedRequest]);
 
   // 静默获取请求（用于自动轮询，不显示加载状态）
-  const fetchRequestsSilently = async () => {
+  const fetchRequestsSilently = useCallback(async () => {
     try {
       const res = await fetch('/api/requests');
       if (!res.ok) return;
@@ -113,7 +138,7 @@ export default function Home() {
       // 静默失败，不显示错误
       console.error('Silent fetch failed:', err);
     }
-  };
+  }, [lastRequestCount, selectedRequest]);
 
   const getPath = (url: string) => {
     try {

@@ -1,28 +1,12 @@
 import { NextRequest } from 'next/server';
-
-// 存储所有活跃的SSE连接
-const connections = new Set<ReadableStreamDefaultController>();
-
-// 向所有连接的客户端推送事件
-export function broadcastNewRequest(requestData: unknown) {
-  const message = `data: ${JSON.stringify({ type: 'new-request', data: requestData })}\n\n`;
-  
-  connections.forEach((controller) => {
-    try {
-      controller.enqueue(new TextEncoder().encode(message));
-    } catch (error) {
-      // 如果连接已关闭，从集合中移除
-      connections.delete(controller);
-    }
-  });
-}
+import { addConnection, removeConnection } from '@/lib/broadcast';
 
 export async function GET(request: NextRequest) {
   // 创建一个可读流用于SSE
   const stream = new ReadableStream({
     start(controller) {
       // 添加到连接集合
-      connections.add(controller);
+      addConnection(controller);
       
       // 发送初始连接确认
       const welcomeMessage = `data: ${JSON.stringify({ type: 'connected', message: 'SSE connection established' })}\n\n`;
@@ -33,16 +17,16 @@ export async function GET(request: NextRequest) {
         try {
           const heartbeatMessage = `data: ${JSON.stringify({ type: 'heartbeat', timestamp: Date.now() })}\n\n`;
           controller.enqueue(new TextEncoder().encode(heartbeatMessage));
-        } catch (error) {
+        } catch {
           clearInterval(heartbeat);
-          connections.delete(controller);
+          removeConnection(controller);
         }
       }, 30000);
       
       // 清理函数
       request.signal.addEventListener('abort', () => {
         clearInterval(heartbeat);
-        connections.delete(controller);
+        removeConnection(controller);
         controller.close();
       });
     },
