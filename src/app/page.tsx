@@ -1,103 +1,153 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+
+type RequestData = {
+  id: string;
+  timestamp: number;
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  body: any;
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [requests, setRequests] = useState<RequestData[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [echoUrl, setEchoUrl] = useState('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const { protocol, host } = window.location;
+      setEchoUrl(`${protocol}//${host}/api/echo`);
+    }
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/requests');
+      if (!res.ok) {
+        throw new Error('Failed to fetch requests');
+      }
+      const data = await res.json();
+      setRequests(data);
+      if (data.length > 0 && !selectedRequest) {
+        setSelectedRequest(data[0]);
+      } else if (data.length === 0) {
+        setSelectedRequest(null);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPath = (url: string) => {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  };
+
+  const getBadgeColor = (method: string) => {
+    switch (method.toUpperCase()) {
+      case 'GET': return 'bg-green-100 text-green-800';
+      case 'POST': return 'bg-blue-100 text-blue-800';
+      case 'PUT': return 'bg-yellow-100 text-yellow-800';
+      case 'DELETE': return 'bg-red-100 text-red-800';
+      case 'PATCH': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  return (
+    <main className="flex h-screen bg-gray-50 font-sans">
+      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+        <div className="p-4 border-b border-gray-200">
+          <h1 className="text-xl font-bold">Request Echo</h1>
+          <div className="mt-2">
+            <p className="text-sm text-gray-600">Your personal request bin.</p>
+            <div className="mt-2 p-2 bg-gray-100 rounded">
+              <p className="text-xs text-gray-700 break-all">Send requests to: <strong>{echoUrl}</strong></p>
+            </div>
+          </div>
+          <button
+            onClick={fetchRequests}
+            disabled={isLoading}
+            className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <div className="flex-grow overflow-y-auto">
+          {error && <p className="p-4 text-red-500">{error}</p>}
+          {requests.map((req) => (
+            <div
+              key={req.id}
+              onClick={() => setSelectedRequest(req)}
+              className={`p-4 cursor-pointer border-b border-gray-200 ${selectedRequest?.id === req.id ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getBadgeColor(req.method)}`}>
+                  {req.method}
+                </span>
+                <span className="text-xs text-gray-500">{new Date(req.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <p className="text-sm text-gray-800 mt-1 truncate">{getPath(req.url)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="w-2/3 flex flex-col">
+        {selectedRequest ? (
+          <div className="flex-grow overflow-y-auto p-6">
+            <h2 className="text-2xl font-bold mb-4">Request Details</h2>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">General</h3>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <p><strong>ID:</strong> {selectedRequest.id}</p>
+                  <p><strong>Timestamp:</strong> {new Date(selectedRequest.timestamp).toLocaleString()}</p>
+                  <p><strong>Method:</strong> {selectedRequest.method}</p>
+                  <p><strong>URL:</strong> <span className="break-all">{selectedRequest.url}</span></p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Headers</h3>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <pre className="text-sm overflow-x-auto"><code>{JSON.stringify(selectedRequest.headers, null, 2)}</code></pre>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Body</h3>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <pre className="text-sm overflow-x-auto">
+                    <code>
+                      {typeof selectedRequest.body === 'object' && selectedRequest.body !== null
+                        ? JSON.stringify(selectedRequest.body, null, 2)
+                        : selectedRequest.body}
+                    </code>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            <p>Select a request to see details</p>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
