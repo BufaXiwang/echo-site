@@ -272,7 +272,7 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-sm text-slate-700 font-medium truncate">{getPath(req.url)}</p>
-              <p className="text-xs text-slate-500 mt-1">ID: {req.id.slice(0, 8)}...</p>
+              <p className="text-xs text-slate-500 mt-1">ID: <span className="font-bold">{req.id}</span></p>
             </div>
           ))}
         </div>
@@ -347,7 +347,15 @@ export default function Home() {
                 <div className="p-6">
                   <div className="bg-slate-50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
                     <pre className="text-slate-700">
-                      {JSON.stringify(selectedRequest.headers, null, 2)}
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(selectedRequest.headers).filter(([key]) => 
+                            !key.toLowerCase().startsWith('x-vercel-')
+                          )
+                        ), 
+                        null, 
+                        2
+                      )}
                     </pre>
                   </div>
                 </div>
