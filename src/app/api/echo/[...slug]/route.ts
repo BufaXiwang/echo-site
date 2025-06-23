@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
+import { broadcastNewRequest } from '../../events/route';
 
 async function handler(req: NextRequest) {
   const start = Date.now();
@@ -38,6 +39,9 @@ async function handler(req: NextRequest) {
 
   await kv.zadd('requests', { score: start, member: requestId });
   await kv.hset(`req:${requestId}`, requestData);
+
+  // 向所有连接的客户端推送新请求事件
+  broadcastNewRequest(requestData);
 
   return NextResponse.json({
     message: 'Request captured',
